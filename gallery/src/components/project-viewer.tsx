@@ -25,10 +25,14 @@ interface ProjectViewerProps {
 export function ProjectViewer({ project }: ProjectViewerProps) {
   const [copiedFile, setCopiedFile] = useState<string | null>(null)
 
-  const handleCopy = (fileName: string, content: string) => {
-    navigator.clipboard.writeText(content)
-    setCopiedFile(fileName)
-    setTimeout(() => setCopiedFile(null), 2000)
+  const handleCopy = async (fileName: string, content: string) => {
+     try {
+       await navigator.clipboard.writeText(content)
+       setCopiedFile(fileName)
+       setTimeout(() => setCopiedFile(null), 2000)
+     } catch (error) {
+       console.error("Failed to copy file content to clipboard:", error)
+     }
   }
 
   return (
@@ -48,6 +52,7 @@ export function ProjectViewer({ project }: ProjectViewerProps) {
             src={`/api/serve/${project.slug}/index.html`}
             className="absolute inset-0 w-full h-full border-0 bg-white"
             title={`${project.name} preview`}
+            sandbox="allow-scripts"
           />
         </TabsContent>
 
