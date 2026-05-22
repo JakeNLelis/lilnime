@@ -48,7 +48,7 @@ const loader = new GLTFLoader();
 let landscape;
 // load landscape
 loader.load(
-    "/badlands_with_erosion_and_desert_sand_landscape.glb",
+    "./badlands_with_erosion_and_desert_sand_landscape.glb",
     function (gltf) {
         gltf.castShadow = true;
         gltf.receiveShadow = true;
@@ -77,7 +77,7 @@ const pointClick = raycaster.ray.origin.clone().add(direction.multiplyScalar(4))
 
 let tree;
 function createTree(pointClick) {
-    loader.load("/stylized_tree.glb", function (gltf) {
+    loader.load("./stylized_tree.glb", function (gltf) {
         tree = gltf.scene;
         tree.position.copy(pointClick);
         scene.add(tree);

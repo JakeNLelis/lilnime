@@ -7,6 +7,7 @@ const MIME_TYPES: Record<string, string> = {
   '.html': 'text/html',
   '.css': 'text/css',
   '.js': 'text/javascript',
+  '.mjs': 'text/javascript',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -14,6 +15,9 @@ const MIME_TYPES: Record<string, string> = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.webp': 'image/webp',
+  '.gltf': 'model/gltf+json',
+  '.glb': 'model/gltf-binary',
+  '.bin': 'application/octet-stream',
 }
 
 const REPO_ROOT = path.join(process.cwd(), '..')
@@ -44,7 +48,15 @@ export async function GET(
     if (stat.isDirectory()) {
       const indexPath = path.join(filePath, 'index.html')
       if (fs.existsSync(indexPath)) {
-        const fileContent = fs.readFileSync(indexPath)
+        let fileContent = fs.readFileSync(indexPath, 'utf8')
+        // Inject helper script to allow the parent to request animation refreshes
+        if (fileContent.includes('</body>')) {
+          fileContent = fileContent.replace(
+            '</body>',
+            `\n<script>\n(function(){function refresh(){try{if(window.gsap&&window.ScrollTrigger&&window.ScrollTrigger.refresh){window.ScrollTrigger.refresh()}if(window.gsap&&window.gsap.ticker&&window.gsap.ticker.fps){try{window.gsap.ticker.fps(60)}catch(e){}}window.dispatchEvent(new Event('resize'))}catch(e){}}window.addEventListener('message',function(e){try{if(e&&e.data&&e.data.type==='refresh-animations'){refresh();document.body.style.transform='translateZ(0)';setTimeout(function(){document.body.style.transform=''},50)}}catch(e){}},false);window.addEventListener('load',function(){setTimeout(refresh,50)});})();\n</script>\n</body>`
+          )
+        }
+
         return new NextResponse(fileContent, {
           headers: {
             'Content-Type': 'text/html',
@@ -56,11 +68,29 @@ export async function GET(
       }
     }
 
-    const fileContent = fs.readFileSync(filePath)
+    let fileContentBuffer = fs.readFileSync(filePath)
     const ext = path.extname(filePath).toLowerCase()
     const contentType = MIME_TYPES[ext] || 'application/octet-stream'
 
-    return new NextResponse(fileContent, {
+    // If serving HTML files, inject the helper script to enable refresh messaging
+    if (contentType === 'text/html') {
+      let fileContent = fileContentBuffer.toString('utf8')
+      if (fileContent.includes('</body>')) {
+        fileContent = fileContent.replace(
+          '</body>',
+          `\n<script>\n(function(){function refresh(){try{if(window.gsap&&window.ScrollTrigger&&window.ScrollTrigger.refresh){window.ScrollTrigger.refresh()}if(window.gsap&&window.gsap.ticker&&window.gsap.ticker.fps){try{window.gsap.gsap&&window.gsap.ticker&&window.gsap.ticker.fps}catch(e){};try{window.gsap.ticker.fps(60)}catch(e){}}window.dispatchEvent(new Event('resize'))}catch(e){}}window.addEventListener('message',function(e){try{if(e&&e.data&&e.data.type==='refresh-animations'){refresh();document.body.style.transform='translateZ(0)';setTimeout(function(){document.body.style.transform=''},50)}}catch(e){}},false);window.addEventListener('load',function(){setTimeout(refresh,50)});})();\n</script>\n</body>`
+        )
+      }
+
+      return new NextResponse(fileContent, {
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      })
+    }
+
+    return new NextResponse(fileContentBuffer, {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'no-cache, no-store, must-revalidate',
