@@ -78,11 +78,12 @@ export function ProjectViewer({
                   try {
                     w.dispatchEvent(new Event("resize"));
                   } catch (e) {
-                    // ignore
+                    console.log(e);
                   }
                 }
               } catch (e) {
                 // ignore cross-origin or other access errors
+                console.log(e);
               }
             }}
           />
